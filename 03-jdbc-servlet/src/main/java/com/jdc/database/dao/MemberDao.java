@@ -15,9 +15,10 @@ public class MemberDao {
 		return null;
 	}
 	
-	public MemberDto findById(String email) {
+	public MemberDto findByEmail(String email) {
 		return null;
 	}
+	
 	
 	public int changePassword(String email, String oldPassword, String newPassword) {
 		return 0;
