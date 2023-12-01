@@ -8,7 +8,7 @@ public interface ConnectionManager {
 
 	Connection getConnection() throws SQLException;
 	
-	String URL = "jdbc:mysql//localhost:3306/message_db_servlet";
+	String URL = "jdbc:mysql://localhost:3306/message_db_servlet";
 	String USR = "root";
 	String PWD = "admin";
 	

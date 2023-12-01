@@ -8,7 +8,10 @@ import java.time.LocalDate;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
+import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
 
 import com.jdc.database.DatabaseInitializer;
 import com.jdc.database.connection.ConnectionManager;
@@ -17,6 +20,7 @@ import com.jdc.database.dto.MemberDto;
 import com.jdc.database.dto.MemberDto.Role;
 import com.jdc.database.utils.exception.MessageDbException;
 
+@TestMethodOrder(OrderAnnotation.class)
 public class MemberDaoTest {
 
 	MemberDao memberDao;
@@ -24,7 +28,7 @@ public class MemberDaoTest {
 	
 	@BeforeAll
 	static void setupBefore() {
-		DatabaseInitializer.truncate("memeber","message");
+		DatabaseInitializer.truncate("member","message");
 		memberDto = new MemberDto("floyd@gmail.com","Floyd","foyd",LocalDate.of(2000, 4, 24),Role.Admin);
 	}
 	
@@ -34,89 +38,99 @@ public class MemberDaoTest {
 	}
 	
 	@Test
+	@Order(1)
 	void testCreateMember() {
 		var member = new MemberDto("floyd@gmail.com","Floyd","foyd",LocalDate.of(2000, 4, 24),Role.Admin);
-		assertEquals(1, member);
+		var result = memberDao.create(member);
+		assertEquals(1, result);
 	}
 	
 	@Test 
+	@Order(2)
 	void testDuplicateMember() {
 		var member = new MemberDto("floyd@gmail.com","Floyd","foyd",LocalDate.of(2000, 4, 24),Role.Admin);
 		var exception = assertThrows(MessageDbException.class, () -> memberDao.create(member));
 		
-		assertEquals("Your email has already been used", exception.getMessage());
+		assertEquals("Your email has been used", exception.getMessage());
 	}
 	
 	@Test
+	@Order(3)
 	void testCreateMemberNull() {
 		assertThrows(IllegalArgumentException.class, () -> memberDao.create(null));
 	}
 	
 	@Test
+	@Order(4)
 	void testCreateMemberNullName(){
 		
 		var nameNull = new MemberDto("floyd@gmail.com", null, "foyd", LocalDate.of(2000, 4, 24), Role.Admin);
 		var nullexception = assertThrows(MessageDbException.class, () -> memberDao.create(nameNull));
-		assertEquals("Member name must be Enter", nullexception.getMessage());
+		assertEquals("Name must be Enter", nullexception.getMessage());
 		
 		var nameEmpty = new MemberDto("floyd@gmail.com", "", "foyd", LocalDate.of(2000, 4, 24), Role.Admin);
 		var emptyException = assertThrows(MessageDbException.class, () -> memberDao.create(nameEmpty));
-		assertEquals("Member name must be Enter", emptyException.getMessage());
+		assertEquals("Name must be Enter", emptyException.getMessage());
 	}
 	
 	@Test
+	@Order(5)
 	void testCreateMemberNullEmail() {
 
 		var emailNull = new MemberDto(null, "Floyd", "foyd", LocalDate.of(2000, 4, 24), Role.Admin);
 		var nullexception = assertThrows(MessageDbException.class, () -> memberDao.create(emailNull));
-		assertEquals("Member email must be Enter", nullexception.getMessage());
+		assertEquals("Email must be Enter", nullexception.getMessage());
 		
 		var emailEmpty = new MemberDto("", "Floyd", "foyd", LocalDate.of(2000, 4, 24), Role.Admin);
 		var emptyException = assertThrows(MessageDbException.class, () -> memberDao.create(emailEmpty));
-		assertEquals("Member email must be Enter", emptyException.getMessage());
+		assertEquals("Email must be Enter", emptyException.getMessage());
 
 	}
 
 	@Test
+	@Order(6)
 	void testCreateMemberNullPassword(){
 
 		var passwordNull = new MemberDto("floyd@gmail.com", "Floyd", null, LocalDate.of(2000, 4, 24), Role.Admin);
 		var nullexception = assertThrows(MessageDbException.class, () -> memberDao.create(passwordNull));
-		assertEquals("Member password must be Enter", nullexception.getMessage());
+		assertEquals("Password must be Enter", nullexception.getMessage());
 		
 		var passwordEmpty = new MemberDto("floyd@gmail.com", "Floyd", "", LocalDate.of(2000, 4, 24), Role.Admin);
 		var emptyException = assertThrows(MessageDbException.class, () -> memberDao.create(passwordEmpty));
-		assertEquals("Member email must be Enter", emptyException.getMessage());
+		assertEquals("Password must be Enter", emptyException.getMessage());
 	}
 
 	@Test
+	@Order(7)
 	void testCreateMemberNullDob(){
 
 		var dobNull = new MemberDto("floyd@gmail.com", "Floyd", "foyd", null, Role.Admin);
 		var nullexception = assertThrows(MessageDbException.class, () -> memberDao.create(dobNull));
-		assertEquals("Member's date of brith must be Enter", nullexception.getMessage());
-
+		assertEquals("Date of brith must be Enter", nullexception.getMessage());
 	}
 
 	@Test
+	@Order(8)
 	void testFindByEmailOK() {
 		var result = memberDao.findByEmail(memberDto.email());
 		assertEquals(memberDto, result);
 	}
 	
 	@Test
+	@Order(9)
 	void testFindByEmailException() {
 		var result = memberDao.findByEmail("%s1".formatted(memberDto.email()));
 		assertNull(result);
 	}
 	
 	@Test
+	@Order(10)
 	void testFindByEmailNull() {
 		assertThrows(IllegalArgumentException.class, () -> memberDao.findByEmail(null));
 	}
 	
-	
 	@Test
+	@Order(11)
 	void testChangePasswordOK() {
 		var newPassword = "changedPassword";
 		int result = memberDao.changePassword(memberDto.email(), memberDto.password(), newPassword);
@@ -127,6 +141,7 @@ public class MemberDaoTest {
 	}
 	
 	@Test
+	@Order(12)
 	void testChangePassowrdNotFoundEamil() {
 		var exception = assertThrows(MessageDbException.class, 
 				() -> memberDao.changePassword("%s1".formatted(memberDto.email()), memberDto.password(), "changedPassword"));
@@ -135,6 +150,7 @@ public class MemberDaoTest {
 	}
 
 	@Test
+	@Order(13)
 	void testChangePasswordNullEmail() {
 		var exceptionNull = assertThrows(MessageDbException.class, 
 				() -> memberDao.changePassword(null, memberDto.password(), "changedPassword"));
@@ -146,6 +162,7 @@ public class MemberDaoTest {
 	}
 	
 	@Test
+	@Order(14)
 	void testChangePasswordNullOld() {
 		var exceptionNull = assertThrows(MessageDbException.class, 
 				() -> memberDao.changePassword(memberDto.email(), null, "changedPassword"));
@@ -157,6 +174,7 @@ public class MemberDaoTest {
 	}
 	
 	@Test
+	@Order(15)
 	void testChangePasswordNullNew() {
 		var exceptionNull = assertThrows(MessageDbException.class, 
 				() -> memberDao.changePassword(memberDto.email(), "changedPassword", null));
@@ -165,21 +183,22 @@ public class MemberDaoTest {
 		var exceptionEmpty = assertThrows(MessageDbException.class, 
 				() -> memberDao.changePassword(memberDto.email(), "changedPassword", ""));
 		assertEquals("New password not be empty", exceptionEmpty.getMessage());
-		
 	}
 	
 	@Test
-	void testChangePasswordNotEqualOld() {
+	@Order(16)
+	void testChangePasswordOldUnmatch() {
 		var exception = assertThrows(MessageDbException.class, 
 				() -> memberDao.changePassword(memberDto.email(), "fyguhjk", "secondTimeChangedPassword"));
-		assertEquals("Your old password is invalid", exception.getMessage());
+		assertEquals("Your old password isn't correct", exception.getMessage());
 	}
 	
 	@Test
+	@Order(17)
 	void testChangePasswordSame() {
 		var exception = assertThrows(MessageDbException.class, 
 				() -> memberDao.changePassword(memberDto.email(), "changedPassword", "changedPassword"));
-		assertEquals("old password and new password are the same", exception.getMessage());
+		assertEquals("Old password and New password must not be the same", exception.getMessage());
 
 	}
 	
