@@ -1,13 +1,16 @@
 package com.jdc.database.dao;
 
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.List;
 
 import com.jdc.database.connection.ConnectionManager;
 import com.jdc.database.dto.MemberDto;
 import com.jdc.database.dto.MessageDto;
 import com.jdc.database.dto.MemberDto.Role;
+import com.jdc.database.utils.StringUtils;
 import com.jdc.database.utils.exception.MessageDbException;
 
 public class MessageDao {
@@ -15,22 +18,28 @@ public class MessageDao {
 	ConnectionManager connectionManager;
 	MemberDao memberDao;
 	
+	String SQL_STMT = """
+			select ms.id id,ms.email email,ms.title title,ms.message message,ms.post_at post_at,mb.email email,
+			mb.name name,mb.password password,mb.dob dob,mb.role role 
+			from message ms inner join member mb on mb.email=ms.email where 1=1
+			""";
+	
 	public MessageDao(ConnectionManager connecitonManager) {
 		this.connectionManager = connecitonManager;
 		memberDao = new MemberDao(connecitonManager);
 	}
 	
-	public MessageDto create(MessageDto message) {
+	private void validate(MessageDto message) {
 		
 		if(null == message) {
 			throw new IllegalArgumentException();
-		}
+		}   
 		
-		if(null == message.title()) {
+		if(StringUtils.isEmpty(message.title())) {
 			throw new MessageDbException("Enter Title");
 		}
 		
-		if(null == message.message()) {
+		if(StringUtils.isEmpty(message.message())) {
 			throw new MessageDbException("Enter Message");
 		}
 		
@@ -41,6 +50,12 @@ public class MessageDao {
 		if(null == memberDao.findByEmail(message.member().email())) {
 			throw new MessageDbException("Invalid Member");
 		}
+
+	}
+	
+	public MessageDto create(MessageDto message) {
+		
+		validate(message);
 		
 		try(var conn = connectionManager.getConnection();
 				var stmt = conn.prepareStatement("""
@@ -67,28 +82,13 @@ public class MessageDao {
 	public MessageDto findById(int id) {
 		
 		try(var conn = connectionManager.getConnection();
-				var stmt = conn.prepareStatement("""
-						select ms.id id,ms.email email,ms.title title,ms.message message,ms.post_at post_at,mb.email email,
-						mb.name name,mb.password password,mb.dob dob,mb.role role 
-						from message ms inner join member mb on mb.email=ms.email where ms.id=?
-						""")){
+				var stmt = conn.prepareStatement(SQL_STMT.concat(" and ms.id=?"))){
 			
 			stmt.setInt(1, id);
 			var resultSet = stmt.executeQuery();
 			
 			while(resultSet.next()) {
-				return new MessageDto(
-						resultSet.getInt("id"),
-						resultSet.getString("title"), 
-						resultSet.getString("message"),
-						resultSet.getTimestamp("post_at").toLocalDateTime(),
-						new MemberDto(
-								resultSet.getString("email"),
-								resultSet.getString("name"),
-								resultSet.getString("password"), 
-								resultSet.getDate("dob").toLocalDate(),
-								Role.valueOf(resultSet.getString("role")))
-						);
+				return retriveMessage(resultSet);
 			}
 			
 		} catch (SQLException e) {
@@ -99,16 +99,118 @@ public class MessageDao {
 	}
 	
 	public List<MessageDto> search(String memberName,String keyword) {
-		return null;
+		
+		List<MessageDto> messageList = new ArrayList<MessageDto>();
+		StringBuffer sql = new StringBuffer(SQL_STMT);
+		List<String> params = new ArrayList<String>();
+		
+		if(!StringUtils.isEmpty(memberName)) {
+			sql.append(" and lower(mb.name) like ?");
+			params.add("%".concat(memberName).concat("%").toLowerCase());
+		}
+		
+		if(!StringUtils.isEmpty(keyword)) {
+			sql.append(" and lower(ms.title) like ? or lower(ms.message) like ?");
+			params.add("%".concat(keyword).concat("%").toLowerCase());
+			params.add("%".concat(keyword).concat("%").toLowerCase());
+		}
+		
+		try(var conn = connectionManager.getConnection();
+				var stmt = conn.prepareStatement(sql.toString())){
+			
+			for(int i=0; i < params.size(); i++) {
+				stmt.setObject(i+1, params.get(i));
+			}
+			var resultSet = stmt.executeQuery();
+			
+			while(resultSet.next()) {
+				messageList.add(retriveMessage(resultSet));
+			}
+			
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		
+		return messageList;
 	}
 	
 	public List<MessageDto> searchByEmail(String email) {
-		return null;
+		
+		List<MessageDto> messageList = new ArrayList<MessageDto>();
+		if(null == email) {
+			throw new IllegalArgumentException();
+		}
+		
+		try(var conn = connectionManager.getConnection();
+				var stmt = conn.prepareStatement(SQL_STMT.concat(" and ms.email=?"))){
+			
+			stmt.setString(1, email);
+			var resultSet = stmt.executeQuery();
+			while(resultSet.next()) {
+				messageList.add(retriveMessage(resultSet)); 
+			}
+			
+			if(messageList.size() > 0) {
+				return messageList;
+			}
+			
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		
+		throw new MessageDbException("Email not Found");
 	}
 	
 	public int save(MessageDto message) {
+		
+		validate(message);
+		
+		try(var conn = connectionManager.getConnection();
+				var stmt = conn.prepareStatement("""
+						update message set title=?,message=? where id=?
+						""")){
+			stmt.setString(1, message.title());
+			stmt.setString(2, message.message());
+			stmt.setInt(3, message.id());
+			
+			return stmt.executeUpdate();
+			
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		
 		return 0;
 	}
 	
+	private MessageDto retriveMessage(ResultSet resultSet) throws SQLException{
+		return new MessageDto(
+				resultSet.getInt("id"),
+				resultSet.getString("title"), 
+				resultSet.getString("message"),
+				resultSet.getTimestamp("post_at").toLocalDateTime(),
+				new MemberDto(
+						resultSet.getString("email"),
+						resultSet.getString("name"),
+						resultSet.getString("password"), 
+						resultSet.getDate("dob").toLocalDate(),
+						Role.valueOf(resultSet.getString("role")))
+				);
+	}
+	
+	
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
  

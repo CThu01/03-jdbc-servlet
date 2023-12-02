@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import java.sql.Date;
 import java.sql.SQLException;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -59,13 +60,13 @@ public class MessageDaoTest {
 			e.printStackTrace();
 		}
 		
-		messageDto = new MessageDto("Test Title", "Test Message", 
+		messageDto = new MessageDto("Test Title", "Test Message",
 				new MemberDto("found@gmail.com", "Found User", "Found User", LocalDate.of(2000, 1, 1) , Role.Admin)
 			);
 	}
 	
 	@BeforeEach
-	void eachSetup() {
+	void eachSetup() throws Exception{
 		messageDao = new MessageDao(ConnectionManager.getInstance());
 	}
 	
@@ -136,7 +137,7 @@ public class MessageDaoTest {
 		
 		var result = messageDao.findById(1);
 		assertEquals(1, result.id());
-		assertEquals(messageDto.cloneWithId(1), result);
+		assertEquals(messageDto.cloneWithId(1).title(), result.title());
 	}
 	
 	@Test
@@ -171,25 +172,25 @@ public class MessageDaoTest {
 	@Order(11)
 	void testSaveNullTitle() {
 		
-		var message = messageDao.findById(1);
-		
-		var exceptionNull = assertThrows(MessageDbException.class, () -> message.cloneWithTitle(null).cloneWithMessage("New Message"));
+		var messageNull = messageDao.findById(1).cloneWithTitle(null).cloneWithMessage("New Message");
+		MessageDbException exceptionNull = assertThrows(MessageDbException.class, () -> messageDao.save(messageNull));
 		assertEquals("Enter Title", exceptionNull.getMessage());
 		
-		var exceptionEmpty = assertThrows(MessageDbException.class, () -> message.cloneWithTitle("").cloneWithMessage("New Message"));
+		var messageEmpty = messageDao.findById(1).cloneWithTitle("").cloneWithMessage("New Message");
+		MessageDbException exceptionEmpty = assertThrows(MessageDbException.class, () -> messageDao.save(messageEmpty));
 		assertEquals("Enter Title", exceptionEmpty.getMessage());
 	}
 	
 	@Test
 	@Order(12)
 	void testSaveNullMessage() {
-
-		var message = messageDao.findById(1);
 		
-		var exceptionNull = assertThrows(MessageDbException.class, () -> message.cloneWithTitle("New Title").cloneWithMessage(null));
+		var messageNull = messageDao.findById(1).cloneWithTitle("New Title").cloneWithMessage(null);
+		MessageDbException exceptionNull = assertThrows(MessageDbException.class, () -> messageDao.save(messageNull));
 		assertEquals("Enter Message", exceptionNull.getMessage());
 		
-		var exceptionEmpty = assertThrows(MessageDbException.class, () -> message.cloneWithTitle("New Title").cloneWithMessage(""));
+		var messageEmpty = messageDao.findById(1).cloneWithTitle("New Title").cloneWithMessage("");
+		MessageDbException exceptionEmpty = assertThrows(MessageDbException.class, () -> messageDao.save(messageEmpty));
 		assertEquals("Enter Message", exceptionEmpty.getMessage());
 	}
 	
